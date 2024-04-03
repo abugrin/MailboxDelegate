@@ -1,0 +1,3 @@
+ResourceMail, ActorMail, ImapFullAccess, SendAs, SendOnBehalf
+resource_user1@domain.ru,actor_user1@domain,true,true,true
+resource_user2@domain.ru,actor_user2@domain,true,false,true
