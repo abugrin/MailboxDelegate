@@ -31,4 +31,5 @@ https://yandex.ru/support/mail-business/mail-clients/shared-mailboxes.html
    - Установить [Python](https://www.python.org/)
    - Установить библиотеки: `pip install -r requirements.txt`
    - Параметры запуска:
-           `python delegate.py -f имя_файла.csv`
+           `python delegate.py -f имя_файла.csv` - запускает процесс настройки делегирования из файла .csv
+           `python delegate.py -q` - запрашивает текущую конфигурацию делегирования и сохраняет в файл current_records.csv

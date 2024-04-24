@@ -19,8 +19,8 @@ headers = {
 parser = ArgumentParser()
 parser.add_argument("-f", "--file", dest="input_file", default='delegate_in.csv',
                     help="Input csv file to process")
-parser.add_argument("-r", "--run", dest="run", default=False,
-                    help="Post collected records to organization")
+parser.add_argument("-q", "--query", dest="query_mode", default=False,
+                    action="store_true", help="Query current configuration")
 args = parser.parse_args()
 
 MESSAGES = {
@@ -83,12 +83,14 @@ def fetch_users_by_page(page):
 
 
 def check_request_parameters():
-    """Function will check if input file is provided as -f parameter and if not will try to open default file"""
-    input_file = Path(args.input_file)
-    if not input_file.is_file():
-        raise FileNotFoundError(f'Input file {input_file} not found')
-    else:
-        print(f'Users will be loaded from {input_file} file')
+    """Function will check if input file is provided as -f parameter and if not will try to open default file.
+    Will not tess file in -q Query mode"""
+    if not args.query_mode:
+        input_file = Path(args.input_file)
+        if not input_file.is_file():
+            raise FileNotFoundError(f'Input file {input_file} not found')
+        else:
+            print(f'Users will be loaded from {input_file} file')
 
 
 def get_delegate_mailboxes():
@@ -186,6 +188,51 @@ def get_actor_delegations(delegate_config):
         sleep(FETCH_RATE)
 
 
+def get_resource_delegations(users):
+    delegate_records = []
+    for user in users:
+        resource_id = user['user_id']
+        path = URL + f"/admin/v1/org/{ORG_ID}/mail/delegated/{resource_id}/actors"
+        response = get(path, headers=headers)
+
+        if response.status_code == 200:
+            response_json = response.json()
+            actors = response_json['actors']
+            if len(actors) > 0:
+                delegate_record = {}
+                for actor in actors:
+                    actor_email = ""
+                    for actor_user in users:
+                        if actor['actorId'] == actor_user['user_id']:
+                            actor_email = actor_user['email']
+                            break
+                    print(f"Resource: ID: {resource_id} Email: {user['email']} -> Actor: ID: {actor['actorId']} "
+                          f"Email: {actor_email} Rights: ", end=' ')
+                    delegate_record['resourceId'] = resource_id
+                    delegate_record['resourceEmail'] = user['email']
+                    delegate_record['actorId'] = actor['actorId']
+                    delegate_record['actorEmail'] = actor_email
+                    delegate_record['ImapFullAccess'] = False
+                    delegate_record['SendAs'] = False
+                    delegate_record['SendOnBehalf'] = False
+
+                    rights = actor['rights']
+                    for right in rights:
+                        if right == "imap_full_access":
+                            delegate_record['ImapFullAccess'] = True
+                        elif right == "send_as":
+                            delegate_record['SendAs'] = True
+                        elif right == "send_on_behalf":
+                            delegate_record['SendOnBehalf'] = True
+
+                        print(right, end=' ')
+                    print(end="\n")
+                delegate_records.append(delegate_record)
+
+        sleep(FETCH_RATE)
+    return delegate_records
+
+
 def post_delegation_config(delegate_config):
     for delegate_record in delegate_config:
         print(f"Processing record: {delegate_record['resource_mail']} "
@@ -216,29 +263,43 @@ def post_delegation_config(delegate_config):
         sleep(FETCH_RATE)
 
 
+def save_records_to_csv(delegate_records):
+    with open('current_records.csv', 'w', newline='') as f:
+        keys = delegate_records[0].keys()
+        w = csv.DictWriter(f, keys)
+        w.writeheader()
+        w.writerows(delegate_records)
+
+
 if __name__ == '__main__':
 
-    try:
-        check_request_parameters()
+    if not args.query_mode:
+        try:
+            check_request_parameters()
+            pages = count_pages()
+            all_users = fetch_all_users(pages)
+            config = map_users_csv(all_users)
+            print(f"Records ready to process: {len(config)}")
+            for row in config:
+                print(f"{row['resource_mail']} ({row['resource_id']}) -> {row['actor_mail']} ({row['actor_id']}) -> "
+                      f"{row['imap_full_access']} |  {row['send_as']} | {row['send_on_behalf']}")
+
+            get_actor_delegations(config)
+            if len(config) > 0:
+                if duplicate_found:
+                    print("Duplicate records will be replaced")
+                start = input('Configure mailbox delegation in your organization? (y/n): ')
+                if start.lower() == 'y':
+                    post_delegation_config(config)
+                    print("Done")
+            else:
+                print("Nothing to do...")
+
+        except Exception as err:
+            print(f"{err}")
+            sys.exit(1)
+    else:
         pages = count_pages()
         all_users = fetch_all_users(pages)
-        config = map_users_csv(all_users)
-        print(f"Records ready to process: {len(config)}")
-        for row in config:
-            print(f"{row['resource_mail']} ({row['resource_id']}) -> {row['actor_mail']} ({row['actor_id']}) -> "
-                  f"{row['imap_full_access']} |  {row['send_as']} | {row['send_on_behalf']}")
-
-        get_actor_delegations(config)
-        if len(config) > 0:
-            if duplicate_found:
-                print("Duplicate records will be replaced")
-            start = input('Configure mailbox delegation in your organization? (y/n): ')
-            if start.lower() == 'y':
-                post_delegation_config(config)
-                print("Done")
-        else:
-            print("Nothing to do...")
-
-    except Exception as err:
-        print(f"{err}")
-        sys.exit(1)
+        records = get_resource_delegations(all_users)
+        save_records_to_csv(records)
