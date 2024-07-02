@@ -16,6 +16,8 @@ https://yandex.ru/support/mail-business/mail-clients/shared-mailboxes.html
 
     ```ya360_admin:mail_read_shared_mailbox_inventory``` — чтение информации о правах доступа к почтовым ящикам
 
+    ```directory:read_users``` - чтение данных о сотрудниках
+
 2) Подготовить .csv файл для импорта со следующей структурой (см. пример in.csv)
 
     - 1 строка: ResourceMail, ActorMail, ImapFullAccess, SendAs, SendOnBehalf
