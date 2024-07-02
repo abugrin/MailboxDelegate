@@ -29,7 +29,10 @@ https://yandex.ru/support/mail-business/mail-clients/shared-mailboxes.html
 
 4) Запуск:
    - Установить [Python](https://www.python.org/)
-   - Установить библиотеки: `pip install -r requirements.txt`
-   - Параметры запуска:
+   - Перейти в папку с проектом и создать виртуальное окружение: `python -m venv .venv`
+   - Запустить скрипт активации виртуального окружения: На Windows `.venv\Scripts\activate.bat`
+   - Установить Poetry: `pip install poetry`
+   - Установить зависимости: `poetry install`
+   - Запустить скрипт. Параметры запуска:
            `python delegate.py -f имя_файла.csv` - запускает процесс настройки делегирования из файла .csv
            `python delegate.py -q` - запрашивает текущую конфигурацию делегирования и сохраняет в файл current_records.csv

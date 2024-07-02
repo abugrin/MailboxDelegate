@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "mailboxdelegate"
+name = "delegate"
 version = "0.1.0"
 description = "Mailbox delegation script for Yandex 360"
 authors = ["Anton Bugrin <abugrin@yandex.ru>"]
